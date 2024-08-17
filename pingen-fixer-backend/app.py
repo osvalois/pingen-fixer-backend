@@ -152,7 +152,6 @@ class SonarClient:
 sonar_client = SonarClient()
 
 @timing_decorator
-@timing_decorator
 def get_ai_suggestion(issue, code_snippet):
     llm = ChatOpenAI(model_name="gpt-4", temperature=0.7, openai_api_key=OPENAI_API_KEY)
     
@@ -165,11 +164,35 @@ def get_ai_suggestion(issue, code_snippet):
     Code Snippet:
     {code_snippet}
 
-    Provide a detailed analysis and suggestion to address this issue. Include:
-    1. A brief explanation of why this is an issue
-    2. The potential risks associated with this issue
-    3. A step-by-step guide on how to fix the issue
-    4. Best practices to prevent similar issues in the future
+    Provide a detailed analysis and suggestion to address this issue. Your response should include:
+
+    1. ADJUSTED_CODE: The complete adjusted code that resolves the issue. This should be the full, corrected version of the original code snippet.
+
+    2. EXPLANATION: A brief explanation of why this is an issue and the potential risks associated with it.
+
+    3. STEPS_TO_FIX: A step-by-step guide on how the code was fixed.
+
+    4. BEST_PRACTICES: Best practices to prevent similar issues in the future.
+
+    Format your response as follows:
+
+    ADJUSTED_CODE:
+    ```
+    [Place the full adjusted code here]
+    ```
+
+    EXPLANATION:
+    [Your explanation here]
+
+    STEPS_TO_FIX:
+    1. [Step 1]
+    2. [Step 2]
+    ...
+
+    BEST_PRACTICES:
+    - [Practice 1]
+    - [Practice 2]
+    ...
 
     Your response should be thorough yet concise, suitable for a professional development team.
     """
@@ -204,6 +227,7 @@ def get_ai_suggestion(issue, code_snippet):
     final_suggestion = " ".join(suggestions)
     logger.info(f"Total tokens used: {total_tokens}")
     return final_suggestion
+
 @app.route('/api/issues', methods=['GET'])
 @limiter.limit("10 per minute")
 @timing_decorator
@@ -311,15 +335,33 @@ def ai_suggest():
 
         suggestion = get_ai_suggestion(issue, code_snippet)
 
+        # Parse the suggestion to extract different parts
+        parts = {}
+        current_part = None
+        for line in suggestion.split('\n'):
+            if line.strip() in ['ADJUSTED_CODE:', 'EXPLANATION:', 'STEPS_TO_FIX:', 'BEST_PRACTICES:']:
+                current_part = line.strip()[:-1]  # Remove the colon
+                parts[current_part] = []
+            elif current_part:
+                parts[current_part].append(line)
+
+        # Join the lines for each part
+        for key in parts:
+            parts[key] = '\n'.join(parts[key]).strip()
+
+        # Extract the code from between the backticks
+        if 'ADJUSTED_CODE' in parts:
+            parts['ADJUSTED_CODE'] = parts['ADJUSTED_CODE'].split('```')[1].strip()
+
         # Store suggestion in MongoDB
         suggestion_doc = {
             "issue_key": issue.get('key'),
-            "suggestion": suggestion,
+            "suggestion": parts,
             "timestamp": datetime.utcnow()
         }
         collection.insert_one(suggestion_doc)
 
-        return jsonify({"suggestion": suggestion})
+        return jsonify(parts)
     except Exception as e:
         logger.error(f"Error in ai_suggest: {str(e)}")
         logger.error(traceback.format_exc())

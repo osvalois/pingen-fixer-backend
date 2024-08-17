@@ -38,7 +38,7 @@ def ai_suggest(issue):
     try:
         response = requests.post(f"{API_BASE_URL}/api/ai_suggest", json={"issue": issue})
         response.raise_for_status()
-        return response.json().get("suggestion")
+        return response.json()
     except requests.RequestException as e:
         st.error(f"Error getting AI suggestions: {str(e)}")
         if hasattr(e.response, 'text'):
@@ -183,7 +183,6 @@ def sidebar_filters(df):
         selected_severities = ["CRITICAL", "BLOCKER"]
     
     return selected_file, selected_severities, selected_types, date_range
-
 def display_issues(filtered_df):
     for _, issue in filtered_df.iterrows():
         with st.expander(f"{'🔴' if issue['severity'] in ['CRITICAL', 'BLOCKER'] else '🟠' if issue['severity'] == 'MAJOR' else '🟡'} {issue['type']} - {issue['message'][:50]}...", expanded=True):
@@ -206,7 +205,6 @@ def display_issues(filtered_df):
             
             if st.button("🧠 Get AI Insight", key=issue['key']):
                 with st.spinner("🔮 AI is analyzing the issue..."):
-                    # Prepare the issue data for the AI suggestion API
                     issue_data = {
                         "key": issue['key'],
                         "component": issue['component'],
@@ -217,12 +215,27 @@ def display_issues(filtered_df):
                     }
                     suggestion = ai_suggest(issue_data)
                 if suggestion:
-                    st.markdown(f"""
-                    <div class="ai-suggestion">
-                        <h5>🤖 AI Recommendation:</h5>
-                        <p>{suggestion}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.markdown("### 🤖 AI Recommendation:")
+                    
+                    # Display adjusted code
+                    if 'ADJUSTED_CODE' in suggestion:
+                        st.markdown("#### Adjusted Code:")
+                        st.code(suggestion['ADJUSTED_CODE'], language="java")
+                    
+                    # Display explanation
+                    if 'EXPLANATION' in suggestion:
+                        st.markdown("#### Explanation:")
+                        st.markdown(suggestion['EXPLANATION'])
+                    
+                    # Display steps to fix
+                    if 'STEPS_TO_FIX' in suggestion:
+                        st.markdown("#### Steps to Fix:")
+                        st.markdown(suggestion['STEPS_TO_FIX'])
+                    
+                    # Display best practices
+                    if 'BEST_PRACTICES' in suggestion:
+                        st.markdown("#### Best Practices:")
+                        st.markdown(suggestion['BEST_PRACTICES'])
                 else:
                     st.warning("Unable to generate AI suggestion at this time. Please try again later or contact support if the issue persists.")
 
