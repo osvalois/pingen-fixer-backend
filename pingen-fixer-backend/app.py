@@ -18,9 +18,11 @@ from flask_cors import CORS
 import requests
 from requests.auth import HTTPBasicAuth
 from pymongo import MongoClient
-from langchain_openai import OpenAI
-from langchain.prompts import PromptTemplate
+from langchain.chat_models import ChatOpenAI
+from langchain.prompts import ChatPromptTemplate
 from langchain.chains import LLMChain
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.callbacks import get_openai_callback
 
 # Load environment variables
 load_dotenv()
@@ -150,8 +152,9 @@ class SonarClient:
 sonar_client = SonarClient()
 
 @timing_decorator
+@timing_decorator
 def get_ai_suggestion(issue, code_snippet):
-    llm = OpenAI(model="gpt-4", temperature=0.7, api_key=OPENAI_API_KEY)
+    llm = ChatOpenAI(model_name="gpt-4", temperature=0.7, openai_api_key=OPENAI_API_KEY)
     
     template = """
     Given the following SonarQube issue and related code snippet:
@@ -171,17 +174,36 @@ def get_ai_suggestion(issue, code_snippet):
     Your response should be thorough yet concise, suitable for a professional development team.
     """
 
-    prompt = PromptTemplate(
-        input_variables=["issue", "code_snippet"],
-        template=template
-    )
+    prompt = ChatPromptTemplate.from_template(template)
 
     chain = LLMChain(llm=llm, prompt=prompt)
-    suggestion = chain.run(issue=json.dumps(issue), code_snippet=code_snippet)
-    
-    logger.info(f"AI Suggestion generated for issue: {issue.get('key', 'Unknown')}")
-    return suggestion
 
+    # Use a text splitter to divide the input into smaller chunks
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=2000,
+        chunk_overlap=200,
+        length_function=len,
+    )
+
+    issue_chunks = text_splitter.split_text(json.dumps(issue))
+    code_chunks = text_splitter.split_text(code_snippet) if code_snippet else [""]
+
+    suggestions = []
+    total_tokens = 0
+    max_tokens = 8000  # Set a maximum token limit
+
+    with get_openai_callback() as cb:
+        for i, (issue_chunk, code_chunk) in enumerate(zip(issue_chunks, code_chunks)):
+            if total_tokens >= max_tokens:
+                break
+            chunk_suggestion = chain.run(issue=issue_chunk, code_snippet=code_chunk)
+            suggestions.append(chunk_suggestion)
+            total_tokens += cb.total_tokens
+            logger.info(f"AI Suggestion generated for chunk {i+1} of issue: {issue.get('key', 'Unknown')}. Tokens used: {cb.total_tokens}")
+
+    final_suggestion = " ".join(suggestions)
+    logger.info(f"Total tokens used: {total_tokens}")
+    return final_suggestion
 @app.route('/api/issues', methods=['GET'])
 @limiter.limit("10 per minute")
 @timing_decorator
