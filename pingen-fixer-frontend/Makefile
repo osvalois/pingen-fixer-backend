@@ -19,26 +19,20 @@ all: venv install run-streamlit
 # Create virtual environment
 venv:
 	$(PYTHON) -m venv $(VENV)
-	$(VENV_BIN)/python -m pip install --upgrade pip setuptools wheel
+	. $(VENV_BIN)/activate && $(PYTHON) -m pip install --upgrade pip setuptools wheel
 
 # Install dependencies
 install: venv
-	$(PIP) install -r requirements.txt
+	. $(VENV_BIN)/activate && $(PIP) install -r requirements.txt
 
 # Run the Streamlit application
-run-streamlit: venv
-	$(STREAMLIT) run $(STREAMLIT_APP)
+run-streamlit: venv install
+	. $(VENV_BIN)/activate && $(STREAMLIT) run $(STREAMLIT_APP)
 
 # Run both applications (Flask in background, Streamlit in foreground)
-run: venv
-	$(FLASK) run &
-	$(STREAMLIT) run $(STREAMLIT_APP)
-
-# Run tests (placeholder for now)
-test: venv
-	@echo "Running tests..."
-	# Add your test command here, for example:
-	# $(VENV_BIN)/pytest
+run: venv install
+	. $(VENV_BIN)/activate && $(FLASK) run &
+	. $(VENV_BIN)/activate && $(STREAMLIT) run $(STREAMLIT_APP)
 
 # Clean up temporary files and virtual environment
 clean:
@@ -46,36 +40,13 @@ clean:
 	find . -type d -name '__pycache__' -delete
 	rm -rf $(VENV)
 
-# Activate virtual environment (Note: this won't work directly from make, use as a reminder)
-activate:
-	@echo "To activate the virtual environment, use:"
-	@echo "source $(VENV_BIN)/activate"
-
-# Generate requirements file
-requirements: venv
-	$(PIP) freeze > requirements.txt
-
-# Run the Flask application in debug mode
-debug-flask: venv
-	FLASK_ENV=development $(FLASK) run --debug
-
-# Run the Streamlit application in debug mode
-debug-streamlit: venv
-	$(STREAMLIT) run $(STREAMLIT_APP) --logger.level=debug
-
 # Help target
 help:
 	@echo "Available targets:"
-	@echo "  make all              - Set up environment, install dependencies, and run both apps"
+	@echo "  make all              - Set up environment, install dependencies, and run Streamlit app"
 	@echo "  make venv             - Create a virtual environment"
 	@echo "  make install          - Install dependencies in the virtual environment"
-	@echo "  make run-flask        - Run the Flask application"
 	@echo "  make run-streamlit    - Run the Streamlit application"
 	@echo "  make run              - Run both Flask and Streamlit applications"
-	@echo "  make test             - Run tests (placeholder)"
 	@echo "  make clean            - Clean up temporary files and virtual environment"
-	@echo "  make activate         - Show command to activate virtual environment"
-	@echo "  make requirements     - Generate requirements.txt"
-	@echo "  make debug-flask      - Run the Flask application in debug mode"
-	@echo "  make debug-streamlit  - Run the Streamlit application in debug mode"
 	@echo "  make help             - Show this help message"

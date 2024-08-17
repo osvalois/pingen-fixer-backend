@@ -38,11 +38,12 @@ def ai_suggest(issue):
     try:
         response = requests.post(f"{API_BASE_URL}/api/ai_suggest", json={"issue": issue})
         response.raise_for_status()
-        return response.json()["suggestion"]
+        return response.json().get("suggestion")
     except requests.RequestException as e:
         st.error(f"Error getting AI suggestions: {str(e)}")
+        if hasattr(e.response, 'text'):
+            st.error(f"Server response: {e.response.text}")
         return None
-
 # Utility Functions
 def load_css():
     with open("style.css") as f:
@@ -198,14 +199,23 @@ def display_issues(filtered_df):
             """, unsafe_allow_html=True)
             
             if 'textRange' in issue:
-                start_line = issue['textRange']['startLine']
-                end_line = issue['textRange']['endLine']
+                start_line = issue['textRange'].get('startLine')
+                end_line = issue['textRange'].get('endLine')
                 code_snippet = f"// Code from line {start_line} to {end_line}\n// Replace with actual code"
                 st.code(code_snippet, language="java")
             
             if st.button("🧠 Get AI Insight", key=issue['key']):
                 with st.spinner("🔮 AI is analyzing the issue..."):
-                    suggestion = ai_suggest(issue.to_dict())
+                    # Prepare the issue data for the AI suggestion API
+                    issue_data = {
+                        "key": issue['key'],
+                        "component": issue['component'],
+                        "textRange": issue.get('textRange', {}),
+                        "message": issue['message'],
+                        "severity": issue['severity'],
+                        "type": issue['type']
+                    }
+                    suggestion = ai_suggest(issue_data)
                 if suggestion:
                     st.markdown(f"""
                     <div class="ai-suggestion">
@@ -213,6 +223,8 @@ def display_issues(filtered_df):
                         <p>{suggestion}</p>
                     </div>
                     """, unsafe_allow_html=True)
+                else:
+                    st.warning("Unable to generate AI suggestion at this time. Please try again later or contact support if the issue persists.")
 
 def display_metrics(summary, filtered_df):
     col1, col2, col3 = st.columns(3)
