@@ -13,3 +13,4 @@ flask-cors==4.0.0
 redis==5.0.1
 Pillow==10.1.0
 reportlab==4.0.8
+streamlit_option_menu

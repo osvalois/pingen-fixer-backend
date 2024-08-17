@@ -12,6 +12,8 @@ import base64
 API_BASE_URL = 'http://127.0.0.1:5000'
 PAGE_TITLE = "PINGEN-FIXER: Advanced Code Analysis"
 PAGE_ICON = "🧬"
+THEME_COLOR = "#2a5298"
+ACCENT_COLOR = "#00ffff"
 
 # API Functions with Enhanced Error Handling and Caching
 @st.cache_data(ttl=300)
@@ -44,13 +46,14 @@ def ai_suggest(issue):
         if hasattr(e.response, 'text'):
             st.error(f"Server response: {e.response.text}")
         return None
+
 # Utility Functions
 def load_css():
     with open("style.css") as f:
         st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
 def display_header():
-    st.markdown("""
+    st.markdown(f"""
         <div class="header">
             <h1>🧬 PINGEN-FIXER</h1>
             <p>Advanced AI-Powered Code Analysis Platform</p>
@@ -85,19 +88,21 @@ def create_severity_chart(summary):
                  title='Issue Distribution by Severity',
                  color='Severity',
                  color_discrete_map={
-                     'BLOCKER': 'red',
-                     'CRITICAL': 'orangered',
-                     'MAJOR': 'orange',
-                     'MINOR': 'yellow',
-                     'INFO': 'lightblue'
+                     'BLOCKER': '#ff4444',
+                     'CRITICAL': '#ff6b6b',
+                     'MAJOR': '#ffa000',
+                     'MINOR': '#ffd54f',
+                     'INFO': '#4fc3f7'
                  })
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(color='#e0e0e0', family='Roboto'),
-        title_font=dict(size=20, color='#00ffff'),
-        legend_title_font=dict(size=12, color='#00ffff'),
-        legend_font=dict(size=10, color='#e0e0e0')
+        title_font=dict(size=24, color=ACCENT_COLOR),
+        legend_title_font=dict(size=14, color=ACCENT_COLOR),
+        legend_font=dict(size=12, color='#e0e0e0'),
+        xaxis=dict(title_font=dict(size=16, color=ACCENT_COLOR)),
+        yaxis=dict(title_font=dict(size=16, color=ACCENT_COLOR))
     )
     return fig
 
@@ -110,9 +115,9 @@ def create_type_chart(summary):
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(color='#e0e0e0', family='Roboto'),
-        title_font=dict(size=20, color='#00ffff'),
-        legend_title_font=dict(size=12, color='#00ffff'),
-        legend_font=dict(size=10, color='#e0e0e0')
+        title_font=dict(size=24, color=ACCENT_COLOR),
+        legend_title_font=dict(size=14, color=ACCENT_COLOR),
+        legend_font=dict(size=12, color='#e0e0e0')
     )
     fig.update_traces(textposition='inside', textinfo='percent+label')
     return fig
@@ -123,14 +128,14 @@ def create_trend_chart(filtered_df):
                   title='Issue Evolution Over Time',
                   labels={'creationDate': 'Date', 'count': 'Number of Issues'},
                   line_shape='spline', render_mode='svg')
-    fig.update_traces(line=dict(color='#00ffff', width=3))
+    fig.update_traces(line=dict(color=ACCENT_COLOR, width=3))
     fig.update_layout(
         plot_bgcolor='rgba(0,0,0,0.1)',
         paper_bgcolor='rgba(0,0,0,0)',
         font=dict(color='#e0e0e0', family='Roboto'),
-        title_font=dict(size=24, color='#00ffff'),
-        xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)'),
-        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)')
+        title_font=dict(size=24, color=ACCENT_COLOR),
+        xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)', title_font=dict(size=16, color=ACCENT_COLOR)),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.1)', title_font=dict(size=16, color=ACCENT_COLOR))
     )
     fig.add_annotation(
         x=trend_data['creationDate'].iloc[-1],
@@ -138,7 +143,7 @@ def create_trend_chart(filtered_df):
         text=f"Latest: {trend_data['count'].iloc[-1]}",
         showarrow=True,
         arrowhead=2,
-        arrowcolor="#00ffff",
+        arrowcolor=ACCENT_COLOR,
         arrowsize=1,
         arrowwidth=2,
         ax=-40,
@@ -148,7 +153,7 @@ def create_trend_chart(filtered_df):
 
 # UI Components
 def sidebar_filters(df):
-    st.sidebar.markdown("## 🔬 Analysis Control Center")
+    st.sidebar.markdown(f"<h2 style='color:{ACCENT_COLOR};'>🔬 Analysis Control Center</h2>", unsafe_allow_html=True)
     
     file_options = ["All Files"] + [os.path.basename(file) for file in df['component'].unique()]
     selected_file = st.sidebar.selectbox("📁 Select Project File", options=file_options)
@@ -169,23 +174,70 @@ def sidebar_filters(df):
         format_func=lambda x: f"{x} {'🐞' if x == 'BUG' else '🔒' if x == 'VULNERABILITY' else '📊'}"
     )
     
-    st.sidebar.markdown("### 📅 Time Frame Analysis")
+    st.sidebar.markdown(f"<h3 style='color:{ACCENT_COLOR};'>📅 Time Frame Analysis</h3>", unsafe_allow_html=True)
     date_range = st.sidebar.date_input(
         "Select analysis period",
         value=(datetime.now() - timedelta(days=30), datetime.now()),
         help="Analyze issues within a specific date range"
     )
     
-    st.sidebar.markdown("### ⚡ Quick Filters")
-    if st.sidebar.button("Recent Issues (Last 7 Days)"):
+    st.sidebar.markdown(f"<h3 style='color:{ACCENT_COLOR};'>⚡ Quick Filters</h3>", unsafe_allow_html=True)
+    col1, col2 = st.sidebar.columns(2)
+    if col1.button("Recent (7 Days)"):
         date_range = (datetime.now() - timedelta(days=7), datetime.now())
-    if st.sidebar.button("Critical & Blocker Issues"):
+    if col2.button("Critical & Blocker"):
         selected_severities = ["CRITICAL", "BLOCKER"]
     
     return selected_file, selected_severities, selected_types, date_range
+
 def display_issues(filtered_df):
-    for _, issue in filtered_df.iterrows():
-        with st.expander(f"{'🔴' if issue['severity'] in ['CRITICAL', 'BLOCKER'] else '🟠' if issue['severity'] == 'MAJOR' else '🟡'} {issue['type']} - {issue['message'][:50]}...", expanded=True):
+    st.markdown(f"<h3 style='color:{ACCENT_COLOR};'>Issue Filters</h3>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        severity_filter = st.multiselect(
+            "Filter by Severity",
+            options=filtered_df['severity'].unique(),
+            default=filtered_df['severity'].unique()
+        )
+    
+    with col2:
+        type_filter = st.multiselect(
+            "Filter by Type",
+            options=filtered_df['type'].unique(),
+            default=filtered_df['type'].unique()
+        )
+    
+    with col3:
+        sort_option = st.selectbox(
+            "Sort issues by",
+            options=["Severity", "Type", "Creation Date"],
+            index=0
+        )
+
+    # Apply filters
+    display_df = filtered_df[
+        (filtered_df['severity'].isin(severity_filter)) &
+        (filtered_df['type'].isin(type_filter))
+    ]
+
+    # Sort issues
+    if sort_option == "Severity":
+        severity_order = ['BLOCKER', 'CRITICAL', 'MAJOR', 'MINOR', 'INFO']
+        display_df['severity_rank'] = display_df['severity'].map(lambda x: severity_order.index(x))
+        display_df = display_df.sort_values('severity_rank')
+    elif sort_option == "Type":
+        display_df = display_df.sort_values('type')
+    else:  # Creation Date
+        display_df = display_df.sort_values('creationDate', ascending=False)
+
+    # Display issue count
+    st.markdown(f"<h4 style='color:{ACCENT_COLOR};'>Displaying {len(display_df)} issues</h4>", unsafe_allow_html=True)
+
+    for _, issue in display_df.iterrows():
+        severity_icon = '🔴' if issue['severity'] in ['CRITICAL', 'BLOCKER'] else '🟠' if issue['severity'] == 'MAJOR' else '🟡'
+        with st.expander(f"{severity_icon} {issue['type']} - {issue['message'][:50]}...", expanded=False):
             st.markdown(f"""
             <div class="issue-card">
                 <h4>{issue['message']}</h4>
@@ -215,26 +267,22 @@ def display_issues(filtered_df):
                     }
                     suggestion = ai_suggest(issue_data)
                 if suggestion:
-                    st.markdown("### 🤖 AI Recommendation:")
+                    st.markdown(f"<h3 style='color:{ACCENT_COLOR};'>🤖 AI Recommendation:</h3>", unsafe_allow_html=True)
                     
-                    # Display adjusted code
                     if 'ADJUSTED_CODE' in suggestion:
-                        st.markdown("#### Adjusted Code:")
+                        st.markdown(f"<h4 style='color:{ACCENT_COLOR};'>Adjusted Code:</h4>", unsafe_allow_html=True)
                         st.code(suggestion['ADJUSTED_CODE'], language="java")
                     
-                    # Display explanation
                     if 'EXPLANATION' in suggestion:
-                        st.markdown("#### Explanation:")
+                        st.markdown(f"<h4 style='color:{ACCENT_COLOR};'>Explanation:</h4>", unsafe_allow_html=True)
                         st.markdown(suggestion['EXPLANATION'])
                     
-                    # Display steps to fix
                     if 'STEPS_TO_FIX' in suggestion:
-                        st.markdown("#### Steps to Fix:")
+                        st.markdown(f"<h4 style='color:{ACCENT_COLOR};'>Steps to Fix:</h4>", unsafe_allow_html=True)
                         st.markdown(suggestion['STEPS_TO_FIX'])
                     
-                    # Display best practices
                     if 'BEST_PRACTICES' in suggestion:
-                        st.markdown("#### Best Practices:")
+                        st.markdown(f"<h4 style='color:{ACCENT_COLOR};'>Best Practices:</h4>", unsafe_allow_html=True)
                         st.markdown(suggestion['BEST_PRACTICES'])
                 else:
                     st.warning("Unable to generate AI suggestion at this time. Please try again later or contact support if the issue persists.")
@@ -262,17 +310,17 @@ def display_metrics(summary, filtered_df):
     col3.metric("🛑 Blocker Issues", blocker_issues)
 
 def display_interactive_table(filtered_df):
-    st.markdown("## 🔬 Interactive Issue Explorer")
+    st.markdown(f"<h2 style='color:{ACCENT_COLOR};'>🔬 Interactive Issue Explorer</h2>", unsafe_allow_html=True)
     
     interactive_table = go.Figure(data=[go.Table(
         header=dict(values=list(filtered_df.columns),
-                    fill_color='rgba(0,255,255,0.1)',
+                    fill_color=THEME_COLOR,
                     align='left',
-                    font=dict(color='white', size=12)),
+                    font=dict(color='white', size=14)),
         cells=dict(values=[filtered_df[k].tolist() for k in filtered_df.columns],
                    fill_color='rgba(0,0,0,0.1)',
                    align='left',
-                   font=dict(color='white', size=11))
+                   font=dict(color='white', size=12))
     )])
     interactive_table.update_layout(
         height=500,
@@ -282,9 +330,12 @@ def display_interactive_table(filtered_df):
     st.plotly_chart(interactive_table, use_container_width=True)
 
 def display_ai_insights():
-    st.markdown("## 🧠 AI-Powered Code Health Insights")
+    st.markdown(f"<h2 style='color:{ACCENT_COLOR};'>🧠 AI-Powered Code Health Insights</h2>", unsafe_allow_html=True)
     
     ai_insights = [
+        "Consider implementing automated code reviews to catch issues earlier in the development process.",
+        "Regular refactoring sessions can help maintain code quality and reduce technical debt.",
+        "Encourage pair programming to improve code quality and knowledge sharing among team members."
     ]
 
     for insight in ai_insights:
@@ -316,10 +367,23 @@ def main():
 
     filtered_df = filter_data(issues_df, selected_file, selected_severities, selected_types, date_range, search_term)
 
-    col1, col2 = st.columns([3, 2])
+    tab1, tab2, tab3 = st.tabs(["📊 Overview", "🔍 Detailed Analysis", "📈 Trends"])
 
-    with col1:
-        st.markdown("## 🔍 Code Health Insights")
+    with tab1:
+        st.markdown(f"<h2 style='color:{ACCENT_COLOR};'>📊 Analysis Overview</h2>", unsafe_allow_html=True)
+        display_metrics(summary, filtered_df)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            severity_chart = create_severity_chart(summary)
+            st.plotly_chart(severity_chart, use_container_width=True)
+        
+        with col2:
+            type_chart = create_type_chart(summary)
+            st.plotly_chart(type_chart, use_container_width=True)
+
+    with tab2:
+        st.markdown(f"<h2 style='color:{ACCENT_COLOR};'>🔍 Detailed Issue Analysis</h2>", unsafe_allow_html=True)
         display_issues(filtered_df)
 
         if st.button("📤 Export Analysis Report"):
@@ -328,22 +392,14 @@ def main():
                 st.download_button(
                     label="📥 Download Comprehensive Report",
                     data=excel_file,
-                    file_name="nexus_code_analysis_report.xlsx",
+                    file_name="pingen_code_analysis_report.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
 
-    with col2:
-        st.markdown("## 📊 Analysis Overview")
-        display_metrics(summary, filtered_df)
-        
-        severity_chart = create_severity_chart(summary)
-        st.plotly_chart(severity_chart, use_container_width=True)
-        
-        type_chart = create_type_chart(summary)
-        st.plotly_chart(type_chart, use_container_width=True)
-
-    trend_chart = create_trend_chart(filtered_df)
-    st.plotly_chart(trend_chart, use_container_width=True)
+    with tab3:
+        st.markdown(f"<h2 style='color:{ACCENT_COLOR};'>📈 Issue Trends</h2>", unsafe_allow_html=True)
+        trend_chart = create_trend_chart(filtered_df)
+        st.plotly_chart(trend_chart, use_container_width=True)
 
     display_interactive_table(filtered_df)
     display_ai_insights()
