@@ -151,7 +151,7 @@ sonar_client = SonarClient()
 
 @timing_decorator
 def get_ai_suggestion(issue, code_snippet):
-    llm = OpenAI(temperature=0.7, api_key=OPENAI_API_KEY)
+    llm = OpenAI(model="gpt-4", temperature=0.7, api_key=OPENAI_API_KEY)
     
     template = """
     Given the following SonarQube issue and related code snippet:
