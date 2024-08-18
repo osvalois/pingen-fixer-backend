@@ -9,7 +9,7 @@ import os
 import base64
 
 # Constants and Configuration
-API_BASE_URL = 'http://127.0.0.1:5000'
+API_BASE_URL = 'https://pingen-fixer-backend.fly.dev'
 PAGE_TITLE = "PINGEN-FIXER: Advanced Code Analysis"
 PAGE_ICON = "🧬"
 THEME_COLOR = "#2a5298"
