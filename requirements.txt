@@ -30,3 +30,4 @@ email-validator==2.0.0.post2
 gunicorn==21.2.0
 python-jose==3.3.0
 Flask-Redis==0.4.0
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
